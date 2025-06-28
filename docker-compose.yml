@@ -1,0 +1,53 @@
+version: '3.8' # Specify the Docker Compose file format version
+
+services:
+  # Backend service definition
+  backend:
+    build:
+      context: ./Backend # Path to the Backend directory containing the Dockerfile
+      dockerfile: Dockerfile # Name of the Dockerfile
+    ports:
+      - "5000:5000" # Map host port 5000 to container port 5000
+    environment:
+      # You can add environment variables for your backend here
+      # For example, if you had a .env file for MongoDB URI or JWT_SECRET
+      MONGODB_URI: mongodb://mongo:27017/ecommercedb # Use the MongoDB service name 'mongo'
+      JWT_SECRET: your_jwt_secret_key # Replace with a strong, secret key
+    depends_on:
+      - mongo # Ensure MongoDB starts before the backend
+    networks:
+      - app-network # Connect to the custom network
+
+  # Frontend service definition
+  frontend:
+    build:
+      context: ./Frontend # Path to the Frontend directory containing the Dockerfile
+      dockerfile: Dockerfile # Name of the Dockerfile
+      args:
+        # Pass the backend URL to the frontend build process (Vite environment variable)
+        VITE_API_BASE_URL_ARG: http://backend:5000/api # 'backend' is the service name in docker-compose
+    ports:
+      - "5173:5173" # Map host port 80 to container port 80 (Nginx default)
+      # If you prefer to access frontend on a different port (e.g., 3000), use:
+      # - "3000:80"
+    depends_on:
+      - backend # Ensure backend starts before the frontend
+    networks:
+      - app-network # Connect to the custom network
+
+  # MongoDB service definition
+  mongo:
+    image: mongo:latest # Use the latest official MongoDB image
+    ports:
+      - "27017:27017" # Map host port 27017 to container port 27017
+    volumes:
+      - mongo-data:/data/db # Persist MongoDB data in a named volume
+    networks:
+      - app-network # Connect to the custom network
+
+volumes:
+  mongo-data: # Define the named volume for MongoDB data persistence
+
+networks:
+  app-network: # Define a custom bridge network for services to communicate
+    driver: bridge
